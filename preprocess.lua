@@ -348,10 +348,10 @@ local function setup_sandbox(name, preparation_callback)
     sandbox.__special_positions = {}
 
     sandbox._write = function(num)
-        local line = sandbox._write_lines[num]
+        local line = sandbox._write_lines[num][1]
         line = change_macros(sandbox, line, sandbox.__count, name)
         table.insert(sandbox._output, line)
-        sandbox._linemap[#sandbox._output] = num
+        sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
     end
 
     sandbox.include = function(filename)
@@ -554,7 +554,7 @@ function export.compile_lines(text, name, prep_callback)
             
             -- write blocks
             if hanging_conditional > 0 then
-                ppenv._write_lines[ppenv.__count] = line
+                ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
                 table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
                 -- table.insert(ppenv._output, "")
                 -- ppenv._linemap[#ppenv._output] = special_count or positions_count
