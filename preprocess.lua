@@ -535,6 +535,21 @@ function export.compile_lines(text, name, prep_callback)
             -- table.insert(ppenv._output, "")
             -- ppenv._linemap[#ppenv._output] = special_count or positions_count
 
+            -- If the next line is not going to be a directive,
+            -- immediately execute.
+            if hanging_conditional == 0 then
+                local next_line = ppenv.__lines[ppenv.__count + 1]
+                if not next_line:match("^%s*#") then
+                    local chunk = string.rep("\n", ppenv.__count-1-#direc_lines) .. table.concat(direc_lines, "\n")
+                    direc_lines = {}
+                    local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
+                    if err then
+                        error(err,2)
+                    end
+                    func()
+                end
+            end
+
         else --normal lines
             
             -- write blocks
@@ -544,17 +559,6 @@ function export.compile_lines(text, name, prep_callback)
                 -- table.insert(ppenv._output, "")
                 -- ppenv._linemap[#ppenv._output] = special_count or positions_count
             else
-            	if #direc_lines > 0 then -- execution
-		local chunk = string.rep("\n", ppenv.__count-1-#direc_lines) .. table.concat(direc_lines, "\n")
-                    direc_lines = {}
-                    local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
-                    if err then
-                        error(err,2)
-                    end
-                    func()
-
-				end
-
                 if ppenv.__count < #ppenv.__lines then --strip final padding line
                     line = change_macros(ppenv, line, ppenv.__count, name)
                     in_string, eqs = multiline_status(line, in_string, eqs)
