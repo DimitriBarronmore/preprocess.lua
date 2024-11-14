@@ -368,7 +368,6 @@ local function setup_sandbox(name, preparation_callback, base_env)
         end
         local txt = file:read("a")
         local inclbox = export.compile_lines(txt, filename, preparation_callback, sandbox)
-        ---@diagnostic disable-next-line: need-check-nil
         for count, line in ipairs(inclbox._output) do
             local position = sandbox.__count + count
             table.insert(sandbox.__lines, position, line)
