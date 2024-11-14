@@ -342,11 +342,11 @@ local function setup_sandbox(name, preparation_callback, base_env)
     local sandbox
     if not base_env then
         sandbox = new_sandbox()
+        sandbox.macros = setmetatable({__listed = {}}, macros_mt)
     else
         sandbox = {}
     end
     sandbox.filename = name or ""
-    sandbox.macros = setmetatable({__listed = {}}, macros_mt)
     sandbox._output = {}
     sandbox._write_lines = {}
     sandbox._linemap = {}
