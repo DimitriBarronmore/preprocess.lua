@@ -125,6 +125,7 @@ local function extract_args(iter_str)
     local current_state = "need_left_parens"
     local string_type, last_char
     local eq_count = 0
+    local paren_count = 0
     for char in iter_str:gmatch(".") do
         table.insert(full_iter, char)
         -- print(char)
@@ -132,6 +133,7 @@ local function extract_args(iter_str)
             if not ( char:match("%s") or (char == "(") ) then
                 return false
             elseif char == "(" then
+                paren_count = paren_count + 1
                 current_state = "non_string"
             end
 
@@ -143,9 +145,17 @@ local function extract_args(iter_str)
                         table.insert(args, table.concat(curr_arg) or "")
                         curr_arg = {}
                         current_state = "inbetween_args"
+                    elseif char == "(" then
+                        table.insert(curr_arg, char)
+                        paren_count = paren_count + 1
                     elseif char == ")" then
-                        table.insert(args, table.concat(curr_arg) or "")
-                        return args, table.concat(full_iter)
+                        paren_count = paren_count - 1
+                        if paren_count == 0 then
+                            table.insert(args, table.concat(curr_arg) or "")
+                            return args, table.concat(full_iter)
+                        else
+                            table.insert(curr_arg, char)
+                        end
                     elseif char == '"' or char == "'" then
                         current_state = "in_string"
                         string_type = char
@@ -164,9 +174,17 @@ local function extract_args(iter_str)
                 table.insert(args, table.concat(curr_arg) or "")
                 curr_arg = {}
                 current_state = "inbetween_args"
+            elseif char == "(" then
+                table.insert(curr_arg, char)
+                paren_count = paren_count + 1
             elseif char == ")" then
-                table.insert(args, table.concat(curr_arg) or "")
-                return args, table.concat(full_iter)
+                paren_count = paren_count - 1
+                if paren_count == 0 then
+                    table.insert(args, table.concat(curr_arg) or "")
+                    return args, table.concat(full_iter)
+                else
+                    table.insert(curr_arg, char)
+                end
             elseif char == '"' or char == "'" then
                 current_state = "in_string"
                 string_type = char
@@ -200,9 +218,17 @@ local function extract_args(iter_str)
                     table.insert(args, table.concat(curr_arg) or "")
                     curr_arg = {}
                     current_state = "inbetween_args"
+                elseif char == "(" then
+                    table.insert(curr_arg, char)
+                    paren_count = paren_count + 1
                 elseif char == ")" then
-                    table.insert(args, table.concat(curr_arg) or "")
-                    return args
+                    paren_count = paren_count - 1
+                    if paren_count == 0 then
+                        table.insert(args, table.concat(curr_arg) or "")
+                        return args
+                    else
+                        table.insert(curr_arg, char)
+                    end
                 elseif char == '"' or char == "'" then
                     current_state = "in_string"
                     string_type = char
@@ -291,12 +317,16 @@ local function change_macros(ppenv, line, count, name)
                 s, e = string.find(line, fixedmacro .. "%s*%(", e)
                 if s then
                     local after = line:sub(e, -1)
+                    print("a:", after)
                     local args, full = extract_args(after)
                     if args then
                         local full_match = fixedmacro .. full:gsub("([%^$()%.[%]*+%-%?%%])", "%%%1")
+                        print("f:", full_match, "f2", fixedmacro, "f3", full)
                         line = line:gsub(full_match, function()
-                            local chunk = string.rep("\n", count) .. string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
-                            local f, err = load_func(chunk, name .. " (preprocessor", "t", ppenv)
+                            -- local chunk = string.rep("\n", count) .. string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
+                            local chunk = string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
+                            print(chunk)
+                            local f, err = load_func(chunk, name .. " (preprocessor function)", "t", ppenv)
                             if err then
                                 error(err,2)
                             end
