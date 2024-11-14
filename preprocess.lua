@@ -338,14 +338,21 @@ local macros_mt = {
     end
 }
 
-local function setup_sandbox(name, preparation_callback)
-    local sandbox = new_sandbox()
+local function setup_sandbox(name, preparation_callback, base_env)
+    local sandbox
+    if not base_env then
+        sandbox = new_sandbox()
+    else
+        sandbox = {}
+    end
     sandbox.filename = name or ""
     sandbox.macros = setmetatable({__listed = {}}, macros_mt)
     sandbox._output = {}
     sandbox._write_lines = {}
     sandbox._linemap = {}
     sandbox.__special_positions = {}
+    sandbox.__count = 1
+    sandbox.__lines = {}
 
     sandbox._write = function(num)
         local line = sandbox._write_lines[num][1]
@@ -355,31 +362,25 @@ local function setup_sandbox(name, preparation_callback)
     end
 
     sandbox.include = function(filename)
-        -- local filename = filename:gsub("%.", "/")
-        -- filename = filename .. ".luxh"
-        -- local file = fs.open(filename, "r")
-        -- if file == nil then
-        --     error("file " .. filename .. " does not exist")
-        -- end
-
-        -- local fpath = fs.search_filepath(filename, "")
-        -- if not fpath then
-        -- end
         local file = fs.open(filename, "r")
         if file == nil then
             error("file " .. filename .. " could not be found")
         end
-        local count = 0
+        local txt = file:read("a")
+        local inclbox = export.compile_lines(txt, filename, preparation_callback, sandbox)
         ---@diagnostic disable-next-line: need-check-nil
-        for line in file:lines() do
-            count = count + 1
+        for count, line in ipairs(inclbox._output) do
             local position = sandbox.__count + count
             table.insert(sandbox.__lines, position, line)
-            sandbox.__special_positions[position] = tostring(sandbox.__count - 1) .. (" ( %s:%s: )"):format(filename, count)
+            local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
+            sandbox.__special_positions[position] = pos_string
         end
     end
     if preparation_callback then
         preparation_callback(sandbox)
+    end
+    if base_env then
+        setmetatable(sandbox, {__index = base_env, __newindex = base_env})
     end
     return sandbox
 end
@@ -485,17 +486,16 @@ local function check_conditional(line, hanging_conditional, invalid_pos_map)
     return hanging_conditional
 end
 
-function export.compile_lines(text, name, prep_callback)
+function export.compile_lines(text, name, prep_callback, base_env)
 	name = name or "<lux input>"
 
-    local ppenv = setup_sandbox(name, prep_callback)
-    ppenv.__count = 1
+    local ppenv = setup_sandbox(name, prep_callback, base_env)
+    -- ppenv.__count = 1
     local positions_count = 0
     local in_string, eqs = false, ""
     local hanging_conditional = 0
     local direc_lines = {}
     
-    ppenv.__lines = {}
     for line in (text .. "\n"):gmatch(".-\n") do
         table.insert(ppenv.__lines, line)
     end
