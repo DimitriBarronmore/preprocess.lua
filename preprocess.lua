@@ -317,15 +317,12 @@ local function change_macros(ppenv, line, count, name)
                 s, e = string.find(line, fixedmacro .. "%s*%(", e)
                 if s then
                     local after = line:sub(e, -1)
-                    print("a:", after)
                     local args, full = extract_args(after)
                     if args then
                         local full_match = fixedmacro .. full:gsub("([%^$()%.[%]*+%-%?%%])", "%%%1")
-                        print("f:", full_match, "f2", fixedmacro, "f3", full)
                         line = line:gsub(full_match, function()
                             -- local chunk = string.rep("\n", count) .. string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
                             local chunk = string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
-                            print(chunk)
                             local f, err = load_func(chunk, name .. " (preprocessor function)", "t", ppenv)
                             if err then
                                 error(err,2)
@@ -475,17 +472,19 @@ end
 
 local function check_conditional(line, hanging_conditional, invalid_pos_map)
     local s = 1
+    -- Add padding.
+    line = line .. " "
     repeat
         local had_result = false
-        local r1 = {line:find("then", s)}
+        local r1 = {line:find("%Athen%A", s)}
         -- local r2 = {line:find("else", s)}
-        local r3 = {line:find("do", s)}
-        local r4 = {line:find("repeat", s)}
+        local r3 = {line:find("%Ado%A", s)}
+        local r4 = {line:find("%Arepeat%A", s)}
         -- local r5 = {line:find("function%s+[%d%a_%.:]-%s-%b()", s)}
-        local r5 = {line:find("function", s)}
-        local r6 = {line:find("end", s)}
-        local r7 = {line:find("until", s)}
-        local r8 = {line:find("elseif", s)}
+        local r5 = {line:find("%Afunction%A", s)}
+        local r6 = {line:find("%Aend%A", s)}
+        local r7 = {line:find("%Auntil%A", s)}
+        local r8 = {line:find("%Aelseif%A", s)}
         
         local results_tab = {}
         if r1[1] then table.insert(results_tab, r1) end
@@ -500,14 +499,14 @@ local function check_conditional(line, hanging_conditional, invalid_pos_map)
         local result = results_tab[1]
         
         if result then
-            if is_block_pos_invalid(result[1], invalid_pos_map) == false then
+            if is_block_pos_invalid(result[1] + 1, invalid_pos_map) == false then
                 if (result ~= r6) and (result ~= r7) and (result ~= r8) then
                     hanging_conditional = hanging_conditional + 1
                 else
                     hanging_conditional = hanging_conditional - 1
                 end
             end
-            s = result[2]
+            s = result[2] - 1
             had_result = true
         end
 
