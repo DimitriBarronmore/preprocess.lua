@@ -382,7 +382,7 @@ local function setup_sandbox(name, preparation_callback, base_env)
 
     sandbox._write = function(num)
         local line = sandbox._write_lines[num][1]
-        line = change_macros(sandbox, line, sandbox.__count, name)
+        line = change_macros(sandbox, line, num, name)
         table.insert(sandbox._output, line)
         sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
     end
