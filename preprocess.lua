@@ -377,6 +377,7 @@ local function setup_sandbox(name, preparation_callback, base_env)
     sandbox.filename = name or ""
     sandbox._output = {}
     sandbox._write_lines = {}
+    sandbox._define_lines = {}
     sandbox._linemap = {}
     sandbox.__special_positions = {}
     sandbox.__count = 1
@@ -389,6 +390,17 @@ local function setup_sandbox(name, preparation_callback, base_env)
         end
         table.insert(sandbox._output, line)
         sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
+    end
+
+    sandbox.__write_define = function(a, b)
+        sandbox._define_lines[sandbox.__count] = {a, b or ""}
+        return ("__define(%s)"):format(sandbox.__count)
+    end
+    sandbox.__define = function(num)
+        local l = sandbox._define_lines[num]
+        local key, result = l[1], l[2]
+        print(l, key, result)
+        sandbox.macros[key] = result
     end
 
     sandbox.write = function(str, skip_macros)
@@ -524,13 +536,12 @@ function export.compile_lines(text, name, prep_callback, base_env)
 
             -- Special Directives
             -- #define syntax
-            line = line:gsub("^%s*#%s*define%s+([^%s()]+)%s+(.+)$", "macros[\"%1\"] = [===[%2]===]")
+            line = line:gsub("^%s*#%s*define%s+([^%s()]+)%s+(.+)$", ppenv.__write_define)
             -- function-like define
-            line = line:gsub("^%s*#%s*define%s+([^%s]+%b())%s+(.+)$", "macros[\"%1\"] = [===[%2]===]")
+            line = line:gsub("^%s*#%s*define%s+([^%s]+%b())%s+(.+)$", ppenv.__write_define)
             -- blank define
-            line = line:gsub("^%s*#%s*define%s+([^%s()]+)%s*$", "macros[\"%1\"] = ''")
-            line = line:gsub("^%s*#%s*define%s+([^%s]+%b())%s*$", "macros[\"%1\"] = ''")
-
+            line = line:gsub("^%s*#%s*define%s+([^%s()]+)%s*$", ppenv.__write_define)
+            line = line:gsub("^%s*#%s*define%s+([^%s]+%b())%s*$", ppenv.__write_define)
 
             local stripped = line:gsub("^%s*##?", "")
             table.insert(direc_lines, stripped)
