@@ -382,16 +382,20 @@ local function setup_sandbox(name, preparation_callback, base_env)
     sandbox.__count = 1
     sandbox.__lines = {}
 
-    sandbox._write = function(num)
+    sandbox._write = function(num, skip_macros)
         local line = sandbox._write_lines[num][1]
-        line = change_macros(sandbox, line, num, name)
+        if not skip_macros then
+            line = change_macros(sandbox, line, num, name)
+        end
         table.insert(sandbox._output, line)
         sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
     end
 
-    sandbox.write = function(str)
+    sandbox.write = function(str, skip_macros)
         local line = tostring(str)
-        line = change_macros(sandbox, line, sandbox.__count, name)
+        if not skip_macros then
+            line = change_macros(sandbox, line, sandbox.__count, name)
+        end
         table.insert(sandbox._output, line)
         sandbox._linemap[#sandbox._output] = sandbox.__count
     end
@@ -477,49 +481,6 @@ local function is_block_pos_invalid(position, invalid_pos_map)
     return false
 end
 
-local function check_conditional(line, hanging_conditional, invalid_pos_map)
-    local s = 1
-    -- Add padding.
-    line = line .. " "
-    repeat
-        local had_result = false
-        local r1 = {line:find("%Athen%A", s)}
-        -- local r2 = {line:find("else", s)}
-        local r3 = {line:find("%Ado%A", s)}
-        local r4 = {line:find("%Arepeat%A", s)}
-        -- local r5 = {line:find("function%s+[%d%a_%.:]-%s-%b()", s)}
-        local r5 = {line:find("%Afunction%A", s)}
-        local r6 = {line:find("%Aend%A", s)}
-        local r7 = {line:find("%Auntil%A", s)}
-        local r8 = {line:find("%Aelseif%A", s)}
-        
-        local results_tab = {}
-        if r1[1] then table.insert(results_tab, r1) end
-        -- if r2[1] then table.insert(results_tab, r2) end
-        if r3[1] then table.insert(results_tab, r3) end
-        if r4[1] then table.insert(results_tab, r4) end
-        if r5[1] then table.insert(results_tab, r5) end
-        if r6[1] then table.insert(results_tab, r6) end
-        if r7[1] then table.insert(results_tab, r7) end 
-        if r8[1] then table.insert(results_tab, r8) end
-        table.sort(results_tab, function(a, b) return a[1] < b[1] end)
-        local result = results_tab[1]
-        
-        if result then
-            if is_block_pos_invalid(result[1] + 1, invalid_pos_map) == false then
-                if (result ~= r6) and (result ~= r7) and (result ~= r8) then
-                    hanging_conditional = hanging_conditional + 1
-                else
-                    hanging_conditional = hanging_conditional - 1
-                end
-            end
-            s = result[2] - 1
-            had_result = true
-        end
-
-    until had_result == false
-    return hanging_conditional
-end
 
 function export.compile_lines(text, name, prep_callback, base_env)
 	name = name or "<lux input>"
@@ -528,13 +489,11 @@ function export.compile_lines(text, name, prep_callback, base_env)
     -- ppenv.__count = 1
     local positions_count = 0
     local in_string, eqs = false, ""
-    local hanging_conditional = 0
     local direc_lines = {}
     
     for line in (text .. "\n"):gmatch(".-\n") do
         table.insert(ppenv.__lines, line)
     end
-    table.insert(ppenv.__lines, "") -- one more for padding
 
     while ppenv.__count <= #ppenv.__lines do
         local line = ppenv.__lines[ppenv.__count]
@@ -557,16 +516,10 @@ function export.compile_lines(text, name, prep_callback, base_env)
             if line:match("^%s*##") then
                 local line = line:gsub("^%s*##", "")
 
-                -- write blocks (DUPLICATED, see below)
-                if hanging_conditional > 0 then
-                    ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
-                    table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
-                else
-                    ppenv._linemap[#ppenv._output + 1] = special_count or positions_count
-                    -- line = change_macros(ppenv, line, ppenv.__count, name)
-                    in_string, eqs = multiline_status(line, in_string, eqs)
-                    table.insert(ppenv._output, line)
-                end
+                -- write blocks (MOSTLY DUPLICATED, see below)
+                in_string, eqs = multiline_status(line, in_string, eqs)
+                ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
+                table.insert(direc_lines,("_write(%d, true)"):format(ppenv.__count))
             end
 
             -- Special Directives
@@ -578,48 +531,24 @@ function export.compile_lines(text, name, prep_callback, base_env)
             line = line:gsub("^%s*#%s*define%s+([^%s()]+)%s*$", "macros[\"%1\"] = ''")
             line = line:gsub("^%s*#%s*define%s+([^%s]+%b())%s*$", "macros[\"%1\"] = ''")
 
-            -- if-elseif-else chain handling
-            local invalid_pos_map = find_invalid_block_positions(line)
-            hanging_conditional = check_conditional(line, hanging_conditional, invalid_pos_map)
+
             local stripped = line:gsub("^%s*##?", "")
             table.insert(direc_lines, stripped)
-            -- table.insert(ppenv._output, "")
-            -- ppenv._linemap[#ppenv._output] = special_count or positions_count
-
-            -- If the next line is not going to be a directive,
-            -- immediately execute.
-            if hanging_conditional == 0 then
-                local next_line = ppenv.__lines[ppenv.__count + 1]
-                if not next_line:match("^%s*#") then
-                    local chunk = string.rep("\n", ppenv.__count-#direc_lines) .. table.concat(direc_lines, "\n")
-                    direc_lines = {}
-                    local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
-                    if err then
-                        error(err,2)
-                    end
-                    func()
-                end
-            end
 
         else --normal lines
-            
-            -- write blocks
-            if hanging_conditional > 0 then
-                ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
-                table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
-                -- table.insert(ppenv._output, "")
-                -- ppenv._linemap[#ppenv._output] = special_count or positions_count
-            else
-                if ppenv.__count < #ppenv.__lines then --strip final padding line
-                    ppenv._linemap[#ppenv._output + 1] = special_count or positions_count
-                    line = change_macros(ppenv, line, ppenv.__count, name)
-                    in_string, eqs = multiline_status(line, in_string, eqs)
-                    table.insert(ppenv._output, line)
-                end
-            end
+            in_string, eqs = multiline_status(line, in_string, eqs)
+            ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
+            table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
         end
         ppenv.__count = ppenv.__count + 1
     end
+    local chunk = table.concat(direc_lines, "\n")
+    -- direc_lines = {}
+    local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
+    if err then
+        error(err,2)
+    end
+    func()
     return ppenv
 end
 

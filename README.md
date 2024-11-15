@@ -5,7 +5,7 @@ A portable language-agnostic file preprocessor written in plain Lua. While it's 
 
 # Preprocessing
 
-Consecutive lines in a file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are gathered into a block and executed by the preprocessor as sandboxed Lua code. These preprocessor blocks are run as soon as a non-preprocessor line is about to be encountered. Note that this means that local variables only last within a single span of preprocessor lines.
+Consecutive lines in a file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are executed by the preprocessor as sandboxed Lua code. Note that the detection of multi-line strings and comments does not take preprocessor macros into account.
 
 Lines beginning with '##' are both run as preprocessor code and exported verbatim to the output, which is occasionally useful for setting constant values in both the output code and the preprocessor when metaprogramming Lua code.
 
@@ -31,7 +31,7 @@ For example:
 ```lua
 --- Conditionals:
 
-# hello = false
+# local hello = false
 # if hello then
     print("hello world")
 # else
@@ -45,11 +45,11 @@ For example:
 --- Loops:
 
 print(
-#local count = 0
-#repeat
-#   count = count + 1
-    "the end is never " .. 
-#until count == 10
+# local count = 0
+# repeat
+# 	count = count + 1
+	"the end is never " .. 
+# until count == 10
 "" )
 
 --- output ---
@@ -145,7 +145,7 @@ tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
 -- All macros will delete themselves from the input if they return an empty string.
 -- Callback macros will also delete themselves if they return nil.
 # macros["<blank>"] = ""
-print(<blank>) --> 'print()'
+print(<blank>) --> print()
 
 -- This can be useful when combined with conditional logic.
 # if debug == true then
@@ -161,9 +161,9 @@ print(<blank>) --> 'print()'
 # define add_bark(arg) bark arg bark
 # define blank
 
-print(fizzbuzz)         --> 'print("1 2 fizz 4 buzz fizz 7 8 fizz buzz")'
-print("add_bark(woof)") --> 'print("bark woof bark")'
-print(blank)            --> 'print()'
+print(fizzbuzz)         --> print("1 2 fizz 4 buzz fizz 7 8 fizz buzz")
+print("add_bark(woof)") --> print("bark woof bark")
+print(blank)            --> print()
 ```
 
 ## Including Files
@@ -176,7 +176,7 @@ print("abra cadabra")
 
 --- main.lua ---
 print("apple")
-# include "header.lua"
+# include "header.txt"
 print("apple")
 
 --- output ---
