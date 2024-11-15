@@ -382,7 +382,7 @@ local function setup_sandbox(name, preparation_callback, base_env)
     sandbox.__count = 1
     sandbox.__lines = {}
 
-    sandbox._write = function(num, skip_macros)
+    sandbox.__writefromline = function(num, skip_macros)
         local line = sandbox._write_lines[num][1]
         if not skip_macros then
             line = change_macros(sandbox, line, num, name)
@@ -519,7 +519,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
                 -- write blocks (MOSTLY DUPLICATED, see below)
                 in_string, eqs = multiline_status(line, in_string, eqs)
                 ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
-                table.insert(direc_lines,("_write(%d, true)"):format(ppenv.__count))
+                table.insert(direc_lines,("__writefromline(%d, true)"):format(ppenv.__count))
             end
 
             -- Special Directives
@@ -538,7 +538,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
         else --normal lines
             in_string, eqs = multiline_status(line, in_string, eqs)
             ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
-            table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
+            table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         end
         ppenv.__count = ppenv.__count + 1
     end
