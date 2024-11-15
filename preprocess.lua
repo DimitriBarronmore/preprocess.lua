@@ -321,8 +321,7 @@ local function change_macros(ppenv, line, count, name)
                     if args then
                         local full_match = fixedmacro .. full:gsub("([%^$()%.[%]*+%-%?%%])", "%%%1")
                         line = line:gsub(full_match, function()
-                            -- local chunk = string.rep("\n", count) .. string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
-                            local chunk = string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
+                            local chunk = string.rep("\n", count - 1) .. string.format("return macros[\"%s\"]( %s )", macro, table.concat(args, ", "))
                             local f, err = load_func(chunk, name .. " (preprocessor function)", "t", ppenv)
                             if err then
                                 error(err,2)
@@ -396,10 +395,9 @@ local function setup_sandbox(name, preparation_callback, base_env)
         local txt = file:read("a")
         local inclbox = export.compile_lines(txt, filename, preparation_callback, sandbox)
         for count, line in ipairs(inclbox._output) do
-            local position = sandbox.__count + count
-            table.insert(sandbox.__lines, position, line)
+            table.insert(sandbox._output, line)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
-            sandbox.__special_positions[position] = pos_string
+            sandbox._linemap[#sandbox._output] = pos_string
         end
     end
     if preparation_callback then
@@ -568,7 +566,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
             if hanging_conditional == 0 then
                 local next_line = ppenv.__lines[ppenv.__count + 1]
                 if not next_line:match("^%s*#") then
-                    local chunk = string.rep("\n", ppenv.__count-1-#direc_lines) .. table.concat(direc_lines, "\n")
+                    local chunk = string.rep("\n", ppenv.__count-#direc_lines) .. table.concat(direc_lines, "\n")
                     direc_lines = {}
                     local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
                     if err then
@@ -588,10 +586,10 @@ function export.compile_lines(text, name, prep_callback, base_env)
                 -- ppenv._linemap[#ppenv._output] = special_count or positions_count
             else
                 if ppenv.__count < #ppenv.__lines then --strip final padding line
+                    ppenv._linemap[#ppenv._output + 1] = special_count or positions_count
                     line = change_macros(ppenv, line, ppenv.__count, name)
                     in_string, eqs = multiline_status(line, in_string, eqs)
                     table.insert(ppenv._output, line)
-                    ppenv._linemap[#ppenv._output] = special_count or positions_count
                 end
             end
         end
