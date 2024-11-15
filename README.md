@@ -152,6 +152,7 @@ print(<blank>) --> 'print()'
 #   macros["log(...)"] = "print(...)"
 # else
 #   macros["log(...)"] = ""
+# end
 
 
 -- Simple and Function-Like macros can be defined more easily with C-like syntax sugar.
