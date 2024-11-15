@@ -387,6 +387,13 @@ local function setup_sandbox(name, preparation_callback, base_env)
         sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
     end
 
+    sandbox.write = function(str)
+        local line = tostring(str)
+        line = change_macros(sandbox, line, sandbox.__count, name)
+        table.insert(sandbox._output, line)
+        sandbox._linemap[#sandbox._output] = sandbox.__count
+    end
+
     sandbox.include = function(filename)
         local file = fs.open(filename, "r")
         if file == nil then
