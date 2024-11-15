@@ -326,10 +326,11 @@ local function change_macros(ppenv, line, count, name)
                             if err then
                                 error(err,2)
                             end
-                            local res = tostring(f())
-                            if res == "" or res == nil then
-                                res = " "
+                            local returns = { f() }
+                            for i, val in ipairs(returns) do
+                                returns[i] = tostring(val)
                             end
+                            local res = "" .. table.concat(returns, ", ")
                             return res
                         end)
                     end
