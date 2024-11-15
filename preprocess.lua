@@ -272,7 +272,8 @@ local function change_macros(ppenv, line, count, name)
         local fixedmacro = macro:gsub("([%^$()%.[%]*+%-%?%%])", "%%%1")
 
         -- Simple text-based Macros.
-        if type(res) == "string" then
+        if type(res) == "string" or type(res) == "number" or type(res) == "boolean" then
+            res = tostring(res)
             line = line:gsub(fixedmacro, ( res:gsub("%%", "%%%%")) )
 
         -- Function-like macros.
