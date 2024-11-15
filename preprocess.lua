@@ -376,28 +376,28 @@ local function setup_sandbox(name, preparation_callback, base_env)
     end
     sandbox.filename = name or ""
     sandbox._output = {}
-    sandbox._write_lines = {}
-    sandbox._define_lines = {}
+    sandbox.__write_lines = {}
+    sandbox.__define_lines = {}
     sandbox._linemap = {}
     sandbox.__special_positions = {}
     sandbox.__count = 1
     sandbox.__lines = {}
 
     sandbox.__writefromline = function(num, skip_macros)
-        local line = sandbox._write_lines[num][1]
+        local line = sandbox.__write_lines[num][1]
         if not skip_macros then
             line = change_macros(sandbox, line, num, name)
         end
         table.insert(sandbox._output, line)
-        sandbox._linemap[#sandbox._output] = sandbox._write_lines[num][2]
+        sandbox._linemap[#sandbox._output] = sandbox.__write_lines[num][2]
     end
 
     sandbox.__write_define = function(a, b)
-        sandbox._define_lines[sandbox.__count] = {a, b or ""}
+        sandbox.__define_lines[sandbox.__count] = {a, b or ""}
         return ("__define(%s)"):format(sandbox.__count)
     end
     sandbox.__define = function(num)
-        local l = sandbox._define_lines[num]
+        local l = sandbox.__define_lines[num]
         local key, result = l[1], l[2]
         print(l, key, result)
         sandbox.macros[key] = result
@@ -530,7 +530,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
 
                 -- write blocks (MOSTLY DUPLICATED, see below)
                 in_string, eqs = multiline_status(line, in_string, eqs)
-                ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
+                ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
                 table.insert(direc_lines,("__writefromline(%d, true)"):format(ppenv.__count))
             end
 
@@ -548,7 +548,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
 
         else --normal lines
             in_string, eqs = multiline_status(line, in_string, eqs)
-            ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
+            ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         end
         ppenv.__count = ppenv.__count + 1
