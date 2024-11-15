@@ -542,7 +542,23 @@ function export.compile_lines(text, name, prep_callback, base_env)
             table.insert(ppenv._output, line)
             ppenv._linemap[#ppenv._output] = special_count or positions_count
         elseif line:match("^%s*#")
-          and not in_string then -- DIRECTIVES  
+          and not in_string then -- DIRECTIVES 
+          
+            -- DOUBLE-EXPORT
+            if line:match("^%s*##") then
+                local line = line:gsub("^%s*##", "")
+
+                -- write blocks (DUPLICATED, see below)
+                if hanging_conditional > 0 then
+                    ppenv._write_lines[ppenv.__count] = {line, special_count or positions_count}
+                    table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
+                else
+                    ppenv._linemap[#ppenv._output + 1] = special_count or positions_count
+                    line = change_macros(ppenv, line, ppenv.__count, name)
+                    in_string, eqs = multiline_status(line, in_string, eqs)
+                    table.insert(ppenv._output, line)
+                end
+            end
 
             -- Special Directives
             -- #define syntax
@@ -556,7 +572,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
             -- if-elseif-else chain handling
             local invalid_pos_map = find_invalid_block_positions(line)
             hanging_conditional = check_conditional(line, hanging_conditional, invalid_pos_map)
-            local stripped = line:gsub("^%s*#", "")
+            local stripped = line:gsub("^%s*##?", "")
             table.insert(direc_lines, stripped)
             -- table.insert(ppenv._output, "")
             -- ppenv._linemap[#ppenv._output] = special_count or positions_count
