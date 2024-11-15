@@ -138,7 +138,7 @@ print( "print_var(example_msg)" ) --> print( "hi there" )
 # return ...
 # end
 print( "$(example_msg)" ) --> print( "hi there" )
-print( "$("hello" .. "world")" ) --> print( "hello world" )
+print( "$("hello " .. "world")" ) --> print( "hello world" )
 tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
 
 
@@ -148,7 +148,7 @@ tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
 print(<blank>) --> 'print()'
 
 -- This can be useful when combined with conditional logic.
-# if debug == "true" then
+# if debug == true then
 #   macros["log(...)"] = "print(...)"
 # else
 #   macros["log(...)"] = ""
