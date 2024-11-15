@@ -563,7 +563,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
                     table.insert(direc_lines,("_write(%d)"):format(ppenv.__count))
                 else
                     ppenv._linemap[#ppenv._output + 1] = special_count or positions_count
-                    line = change_macros(ppenv, line, ppenv.__count, name)
+                    -- line = change_macros(ppenv, line, ppenv.__count, name)
                     in_string, eqs = multiline_status(line, in_string, eqs)
                     table.insert(ppenv._output, line)
                 end
