@@ -1,2 +1,191 @@
 # preprocess.lua
-A portable language-agnostic file preprocessor written in plain Lua.
+A portable language-agnostic file preprocessor written in plain Lua. While it's designed primarily for use as a metaprogramming tool for Lua programs, it can be used for other document types as well.
+
+
+
+# Preprocessing
+
+Consecutive lines in a file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are gathered into a block and executed by the preprocessor as sandboxed Lua code. These preprocessor blocks are run as soon as a non-preprocessor line is about to be encountered. Note that this means that local variables only last within a single span of preprocessor lines.
+
+Lines beginning with '##' are both run as preprocessor code and exported verbatim to the output, which is occasionally useful for setting constant values in both the output code and the preprocessor when metaprogramming Lua code.
+
+Within the sandbox, preprocessor code has access to the following standard functions:
+```lua
+coroutine.*  io.*    math.*  string.*  table.*
+assert       error   ipairs  next      pairs
+pcall        print   select  tonumber  tostring
+type         unpack  xpcall  _VERSION
+```
+
+## Included Variables
+
+TODO: Ability to include variables from the API or command line.
+
+- filename: the full path of the current file, or an empty string if the code came from loading a string.
+    - for example:  `print(filename) --> folder.example.lux`
+
+## Conditional Lines
+
+Within an unclosed preprocessor block (`do`, `if`, `while`, `repeat`, `for`, or inside function definitions), input lines will only be written to the output dependent on the surrounding preprocessor code. 
+For example:
+```lua
+--- Conditionals:
+
+# hello = false
+# if hello then
+    print("hello world")
+# else
+    print("goodbye world")
+# end
+
+--- output ---
+    print("goodbye world")
+--- end output ---
+
+--- Loops:
+
+print(
+#local count = 0
+#repeat
+#   count = count + 1
+    "the end is never " .. 
+#until count == 10
+"" )
+
+--- output ---
+print(
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+     "the end is never " .. 
+"" )
+--- end output ---
+
+--- Functions:
+
+# function write_line()
+print("hello world")
+# end
+# write_line()
+print("something in the middle")
+# write_line()
+
+--- output ---
+print("hello world")
+print("something in the middle")
+print("hello world")
+-- end output ---
+
+```
+
+## Macros
+Macros can be defined as string-keyed values in the preprocessor environment's `macros` table. There are three types of macro: simple, function-like, and callback.
+
+Every currently defined macro is evaluated over each input line in sequence, in the order they were originally added. Multiple macros can run into each other if the output of one macro is the input of a different macro.
+
+```lua
+-- Simple macros are simply a string key and a primitive result.
+-- The result can be a string, a number, or a boolean.
+-- When the string key is found, it's replaced with the result.
+# macros.constant = "1000"
+print(constant) --> print(1000)
+
+-- Non-standard characters also work.
+# macros["😂"] = ":joy:"
+print("😂") --> print(":joy:")
+
+-- The result of a macro doesn't need to be constant. This is also a valid macro.
+# macros.RANDOM = math.random(1, 100)
+
+-- Multiple macros can run into each other if defined in the correct order. Be careful.
+# macros.MAC1 = "MAC2"
+# macros.MAC2 = "MAC3"
+print("MAC1") --> print("MAC3")
+
+
+-- Function-like macros are written with parenthesized arguments in the key.
+-- The argument names in the output string will be replaced with the discovered
+-- parenthesized arguments in the input, or with empty space.
+# macros["reverse(arg1, arg2)"] = "arg2 arg1"
+print("reverse(world, hello)") --> print("hello world")
+print("reverse(foo)") --> print(" foo")
+
+-- Function-like macros support '...' as a catch-all last argument, similar to real Lua functions.
+-- The arguments collected are separated by a comma and a space, for use in function calls.
+# macros["discardfirst(first, ...)"] = "..."
+print(discardfirst(1,2,3)) --> print(2, 3)
+
+
+-- Callback macros are Lua functions executed entirely in the preprocessor.
+-- The parenthesized arguments in the source file are copied verbatim into the function call.
+-- This means literals and expressions can be used, and preprocessor variables can be referenced.
+-- The return value of the function is cast to a string and replaces the original text.
+# example_msg = "hi there"
+# macros.print_var = function(name)
+#   return name
+# end
+print( "print_var(example_msg)" ) --> print( "hi there" )
+
+-- Callback macros can be extremely useful for evaluating expressions at compile time.
+-- If a callback macro returns multiple values, they're inserted into the text separated by commas.
+# macros["$"] = function(...)
+# return ...
+# end
+print( "$(example_msg)" ) --> print( "hi there" )
+print( "$("hello" .. "world")" ) --> print( "hello world" )
+tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
+
+
+-- All macros will delete themselves from the input if they return an empty string.
+-- Callback macros will also delete themselves if they return nil.
+# macros["<blank>"] = ""
+print(<blank>) --> 'print()'
+
+-- This can be useful when combined with conditional logic.
+# if debug == "true" then
+#   macros["log(...)"] = "print(...)"
+# else
+#   macros["log(...)"] = ""
+
+
+-- Simple and Function-Like macros can be defined more easily with C-like syntax sugar.
+-- #define <name>[parens] <result>
+# define fizzbuzz "1 2 fizz 4 buzz fizz 7 8 fizz buzz"
+# define add_bark(arg) bark arg bark
+# define blank
+
+print(fizzbuzz)         --> 'print("1 2 fizz 4 buzz fizz 7 8 fizz buzz")'
+print("add_bark(woof)") --> 'print("bark woof bark")'
+print(blank)            --> 'print()'
+```
+
+## Including Files
+You can insert the contents of another file into the current one using the `include(filename)` function. This will immediately run the file `filename` through the same preprocessor environment and write the result into the output file.
+
+```lua
+--- header.lua ---
+print("abra cadabra")
+# define apple orange
+
+--- main.lua ---
+print("apple")
+# include "header.lua"
+print("apple")
+
+--- output ---
+print("apple")
+print("abra cadabra")
+print("orange")
+--- end output ---
+
+-- note that you can use the filename variable to load adjacent files.
+-- assuming the current file is "folder/foobar.lua", this includes folder/header.lua
+# local path = filename:gsub("foobar%.lua$", "")
+# include(path .. "header.lua")
+```
