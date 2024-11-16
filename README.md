@@ -75,6 +75,10 @@ The sandbox also has access to the following non-standard functions and variable
 
 Arguments provided to the preprocessor through the `arguments` parameters in the Lua API or through the command-line utility are exposed to the sandbox environment as standard Lua values. Be careful not to overwrite important values with preprocessor arguments.
 
+### Special Flags
+
+If an argument named `silent` is given to the preprocessor sandbox as `true`, then print statements from the preprocessor will be silenced.
+
 ## Conditional Lines
 
 Within an unclosed preprocessor block (`do`, `if`, `while`, `repeat`, `for`, or inside function definitions), input lines will only be written to the output dependent on the surrounding preprocessor code. 

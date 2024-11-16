@@ -383,6 +383,9 @@ local function setup_sandbox(name, arguments, base_env)
             sandbox[k] = v
         end
     end
+    if sandbox.silent == true then
+        sandbox.print = function() end
+    end
 
     sandbox.filename = name or ""
     sandbox._output = {}
