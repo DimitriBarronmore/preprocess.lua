@@ -438,7 +438,6 @@ local function setup_sandbox(name, arguments, base_env)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
             sandbox._linemap[#sandbox._output] = pos_string
         end
-        print("unincluding", filename)
         sandbox.__included[filename] = nil
     end
     if base_env then
@@ -611,6 +610,7 @@ function export.writefile(input, output, arguments, write_linemap)
     validate_type(output, "string", 2, false)
     validate_type(arguments, "table", 3, true)
     validate_type(write_linemap, "boolean", 4, true)
+    local text, linemap = export.getfile(input, arguments)
     local output_handle = fs.open(output, "w+")
     if not output_handle then
         error("failed to open output file '" .. output .. "'", 2)
@@ -622,7 +622,6 @@ function export.writefile(input, output, arguments, write_linemap)
             error("failed to open linemap file '" .. output .. ".linemap'", 2)
         end
     end
-    local text, linemap = export.getfile(input, arguments)
     output_handle:write(text)
     output_handle:close()
     if write_linemap then
