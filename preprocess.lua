@@ -495,7 +495,7 @@ end
 
 
 function export.compile_lines(text, name, prep_callback, base_env)
-	name = name or "<lux input>"
+	name = name or ""
 
     local ppenv = setup_sandbox(name, prep_callback, base_env)
     -- ppenv.__count = 1
