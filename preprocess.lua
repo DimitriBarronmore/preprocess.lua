@@ -517,10 +517,10 @@ function export.compile_lines(text, name, prep_callback, base_env)
         end
 
         line = line:gsub("\n", "")
-        -- Ignore leading interrobang.
-        if ppenv.__count == 1 and line:match("^%s*#!") then
-            table.insert(ppenv._output, line)
-            ppenv._linemap[#ppenv._output] = special_count or positions_count
+        -- Ignore leading shebang.
+        if ppenv.__count == 1 and line:match("^#!") then
+            ppenv.__write_lines[ppenv.__count] = {line, 1}
+            table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         elseif line:match("^%s*#")
           and not in_string then -- DIRECTIVES 
           
