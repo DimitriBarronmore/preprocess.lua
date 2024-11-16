@@ -495,9 +495,8 @@ end
 
 
 function export.compile_lines(text, name, prep_callback, base_env)
-	name = name or ""
-
     local ppenv = setup_sandbox(name, prep_callback, base_env)
+	name = name or "<preprocessor input>"
     -- ppenv.__count = 1
     local positions_count = 0
     local in_string, eqs = false, ""
