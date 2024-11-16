@@ -369,7 +369,7 @@ local macros_mt = {
 -- Set up local variable back here for the sake of forward definition.
 local compile_lines
 
-local function setup_sandbox(name, preparation_callback, base_env)
+local function setup_sandbox(name, arguments, base_env)
     local sandbox
     if not base_env then
         sandbox = new_sandbox()
@@ -377,6 +377,14 @@ local function setup_sandbox(name, preparation_callback, base_env)
     else
         sandbox = {}
     end
+    if arguments then
+        for k, v in pairs(arguments) do
+            if not sandbox[k] then
+                sandbox[k] = v
+            end
+        end
+    end
+
     sandbox.filename = name or ""
     sandbox._output = {}
     sandbox.__write_lines = {}
@@ -426,9 +434,6 @@ local function setup_sandbox(name, preparation_callback, base_env)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
             sandbox._linemap[#sandbox._output] = pos_string
         end
-    end
-    if preparation_callback then
-        preparation_callback(sandbox)
     end
     if base_env then
         setmetatable(sandbox, {__index = base_env, __newindex = base_env})
@@ -496,8 +501,8 @@ local function is_block_pos_invalid(position, invalid_pos_map)
 end
 
 -- See back-defined local variable.
-compile_lines = function(text, name, prep_callback, base_env)
-    local ppenv = setup_sandbox(name, prep_callback, base_env)
+compile_lines = function(text, name, arguments, base_env)
+    local ppenv = setup_sandbox(name, arguments, base_env)
 	name = name or "<preprocessor input>"
     -- ppenv.__count = 1
     local positions_count = 0
@@ -576,7 +581,7 @@ end
 function export.getstring(text, arguments)
     validate_type(text, "string", 1, false)
     validate_type(arguments, "table", 2, true)
-    local out = compile_lines(text, filepath)
+    local out = compile_lines(text, filepath, arguments)
     return table.concat(out._output, "\n"), table.concat(out._linemap, "\n")
 end
 
@@ -588,7 +593,7 @@ function export.getfile(filepath, arguments)
         error("could not find file '" .. filepath .. "'", 2)
     end
     local text = file:read("a")
-    local out = compile_lines(text, filepath)
+    local out = compile_lines(text, filepath, arguments)
     return table.concat(out._output, "\n"), out._linemap
 end
 

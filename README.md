@@ -73,7 +73,7 @@ The sandbox also has access to the following non-standard functions and variable
 - `filename`: the full path of the current file as used to load it, or an empty string if the input came from loading a string.
     - for example:  `print(filename) --> folder/example.lua`
 
-TODO: Ability to include variables from the API or command line.
+Arguments provided to the preprocessor through the `arguments` parameters in the Lua API or through the command-line utility are exposed to the sandbox environment as standard Lua values
 
 ## Conditional Lines
 
@@ -198,8 +198,9 @@ tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
 # macros["<blank>"] = ""
 print(<blank>) --> print()
 
--- This can be useful when combined with conditional logic.
-# if debug == true then
+-- This can be useful when combined with conditional logic. For example, you can write code
+-- to the output only if a DEBUG flag is passed to the preprocessor.
+# if DEBUG == true then
 #   macros["log(...)"] = "print(...)"
 # else
 #   macros["log(...)"] = ""
