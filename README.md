@@ -73,7 +73,7 @@ The sandbox also has access to the following non-standard functions and variable
 - `filename`: the full path of the current file as used to load it, or an empty string if the input came from loading a string.
     - for example:  `print(filename) --> folder/example.lua`
 
-Arguments provided to the preprocessor through the `arguments` parameters in the Lua API or through the command-line utility are exposed to the sandbox environment as standard Lua values
+Arguments provided to the preprocessor through the `arguments` parameters in the Lua API or through the command-line utility are exposed to the sandbox environment as standard Lua values. Be careful not to overwrite important values with preprocessor arguments.
 
 ## Conditional Lines
 

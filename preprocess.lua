@@ -379,9 +379,7 @@ local function setup_sandbox(name, arguments, base_env)
     end
     if arguments then
         for k, v in pairs(arguments) do
-            if not sandbox[k] then
-                sandbox[k] = v
-            end
+            sandbox[k] = v
         end
     end
 
