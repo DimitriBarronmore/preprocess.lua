@@ -389,7 +389,7 @@ local function setup_sandbox(name, arguments, base_env)
     sandbox.__define_lines = {}
     sandbox._linemap = {}
     sandbox.__special_positions = {}
-    sandbox.__count = 1
+    sandbox.__count = 0
     sandbox.__lines = {}
 
     sandbox.__writefromline = function(num, skip_macros)
@@ -510,8 +510,12 @@ compile_lines = function(text, name, arguments, base_env)
     for line in (text .. "\n"):gmatch(".-\n") do
         table.insert(ppenv.__lines, line)
     end
+    -- Padding, because it sometimes misses the last line otherwise.
+    table.insert(ppenv.__lines, "")
 
-    while ppenv.__count <= #ppenv.__lines do
+    while ppenv.__count < #ppenv.__lines do
+        ppenv.__count = ppenv.__count + 1
+
         local line = ppenv.__lines[ppenv.__count]
         local special_count
         if ppenv.__special_positions[ppenv.__count] then
@@ -556,7 +560,6 @@ compile_lines = function(text, name, arguments, base_env)
             ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         end
-        ppenv.__count = ppenv.__count + 1
     end
     local chunk = table.concat(direc_lines, "\n")
     -- direc_lines = {}
