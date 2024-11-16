@@ -2,6 +2,41 @@
 A portable language-agnostic file preprocessor written in plain Lua. While it's designed primarily for use as a metaprogramming tool for Lua programs, it can be used for other document types as well.
 
 
+# Usage
+
+## As a Lua library.
+
+Import the library as a single Lua file.
+
+```lua
+preprocess = require "preprocess"
+```
+
+The library exposes the following functions:
+```lua
+--- Takes in a string and an optional table of values to populate the preprocessor with.
+--- Returns a string output and an array of the source locations of each line.
+text, linemap = preprocess.getstring(text, arguments)
+
+--- Takes in a path to a file and an optional table of values to populate the preprocessor with.
+--- Returns a string output and an array of the source locations of each line.
+text, linemap = preprocess.getfile(filepath, arguments)
+
+--- Takes in a path to an input file, a path to an output file, an optional table of values
+--- to populate the preprocessor with, and a boolean flag.
+--- Processes the input file, and saves the result to the output file.
+--- If write_linemap == true, it saves a file "<output>.linemap" wherein each line is the
+--- source location of the respective line in the output file.
+preprocess.writefile(input, output, arguments, write_linemap)
+
+-- Takes in a string and a linemap table as returned from getstring() or getfile().
+-- Prints the string with the linemap values for each line prepended.
+preprocess.debug_print(text, linemap)
+```
+
+## As a standalone tool.
+
+TODO
 
 # Preprocessing
 

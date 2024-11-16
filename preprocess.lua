@@ -366,6 +366,9 @@ local macros_mt = {
     end
 }
 
+-- Set up local variable back here for the sake of forward definition.
+local compile_lines
+
 local function setup_sandbox(name, preparation_callback, base_env)
     local sandbox
     if not base_env then
@@ -399,7 +402,6 @@ local function setup_sandbox(name, preparation_callback, base_env)
     sandbox.__define = function(num)
         local l = sandbox.__define_lines[num]
         local key, result = l[1], l[2]
-        print(l, key, result)
         sandbox.macros[key] = result
     end
 
@@ -418,7 +420,7 @@ local function setup_sandbox(name, preparation_callback, base_env)
             error("file " .. filename .. " could not be found")
         end
         local txt = file:read("a")
-        local inclbox = export.compile_lines(txt, filename, preparation_callback, sandbox)
+        local inclbox = compile_lines(txt, filename, preparation_callback, sandbox)
         for count, line in ipairs(inclbox._output) do
             table.insert(sandbox._output, line)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
@@ -493,8 +495,8 @@ local function is_block_pos_invalid(position, invalid_pos_map)
     return false
 end
 
-
-function export.compile_lines(text, name, prep_callback, base_env)
+-- See back-defined local variable.
+compile_lines = function(text, name, prep_callback, base_env)
     local ppenv = setup_sandbox(name, prep_callback, base_env)
 	name = name or "<preprocessor input>"
     -- ppenv.__count = 1
@@ -563,19 +565,65 @@ function export.compile_lines(text, name, prep_callback, base_env)
     return ppenv
 end
 
-function export.get_file(filepath)
+local function validate_type(val, desired_type, number, optional)
+    if type(val) ~= desired_type then
+        if not (optional and val == nil) then
+            error(("expected argument [%s] to be type %s, got %s"):format(number, desired_type, type(val)), 3)
+        end
+    end
+end
+
+function export.getstring(text, arguments)
+    validate_type(text, "string", 1, false)
+    validate_type(arguments, "table", 2, true)
+    local out = compile_lines(text, filepath)
+    return table.concat(out._output, "\n"), table.concat(out._linemap, "\n")
+end
+
+function export.getfile(filepath, arguments)
+    validate_type(filepath, "string", 1, false)
+    validate_type(arguments, "table", 2, true)
     local file = fs.open(filepath)
     if file == nil then
         error("could not find file '" .. filepath .. "'", 2)
     end
     local text = file:read("a")
-    local out = export.compile_lines(text, filepath)
-    -- return table.concat(out._output, "\n")
-    local str = ""
-    for i, line in ipairs(out._output) do
-        str = str .. out._linemap[i] .. "| " .. line .. "\n"
+    local out = compile_lines(text, filepath)
+    return table.concat(out._output, "\n"), out._linemap
+end
+
+function export.writefile(input, output, arguments, write_linemap)
+    validate_type(input, "string", 1, false)
+    validate_type(output, "string", 2, false)
+    validate_type(arguments, "table", 3, true)
+    validate_type(write_linemap, "boolean", 4, true)
+    local output_handle = fs.open(output, "w+")
+    if not output_handle then
+        error("failed to open output file '" .. output .. "'", 2)
     end
-    return str
+    local linemap_handle
+    if write_linemap then
+        linemap_handle = fs.open(output .. ".linemap", "w+")
+        if not linemap_handle then
+            error("failed to open linemap file '" .. output .. ".linemap'", 2)
+        end
+    end
+    local text, linemap = export.getfile(input, arguments)
+    output_handle:write(text)
+    output_handle:close()
+    if write_linemap then
+        linemap_handle:write(table.concat(linemap, "\n"))
+        linemap_handle:close()
+    end
+    return true
+end
+
+function export.debug_print(text, linemap)
+    local count = 0
+    for line in text:gmatch("([^\n]*)\n") do
+        count = count + 1
+        print(linemap[count] .. " |" ..  line)
+    end
 end
 
 return export
