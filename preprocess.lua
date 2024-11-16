@@ -374,6 +374,7 @@ local function setup_sandbox(name, arguments, base_env)
     if not base_env then
         sandbox = new_sandbox()
         sandbox.macros = setmetatable({__listed = {}}, macros_mt)
+        sandbox.__included = {}
     else
         sandbox = {}
     end
@@ -421,9 +422,14 @@ local function setup_sandbox(name, arguments, base_env)
     end
 
     sandbox.include = function(filename, flags)
+        if sandbox.__included[filename] then
+            error("detected cyclic inclusion loop", 2)
+        else
+            sandbox.__included[filename] = true
+        end
         local file = fs.open(filename, "r")
         if file == nil then
-            error("file " .. filename .. " could not be found")
+            error("file " .. filename .. " could not be found", 2)
         end
         local txt = file:read("a")
         local inclbox = compile_lines(txt, filename, flags, sandbox)
@@ -432,6 +438,8 @@ local function setup_sandbox(name, arguments, base_env)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
             sandbox._linemap[#sandbox._output] = pos_string
         end
+        print("unincluding", filename)
+        sandbox.__included[filename] = nil
     end
     if base_env then
         setmetatable(sandbox, {__index = base_env, __newindex = base_env})
