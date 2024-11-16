@@ -9,6 +9,13 @@ Consecutive lines in a file which begin with '#' (ignoring trailing whitespace, 
 
 Lines beginning with '##' are both run as preprocessor code and exported verbatim to the output, which is occasionally useful for setting constant values in both the output code and the preprocessor when metaprogramming Lua code.
 
+If you're preprocessing a file which may need to have lines beginning with one or more #, such as Markdown headings, you can escape the preprocessor with a single backslash as so:
+```
+\# Heading 1
+\## Heading 2
+\### Heading 3
+```
+
 Within the sandbox, preprocessor code has access to the following standard functions:
 ```lua
 coroutine.*  io.*    math.*  string.*  table.*

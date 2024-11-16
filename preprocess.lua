@@ -547,6 +547,7 @@ function export.compile_lines(text, name, prep_callback, base_env)
             table.insert(direc_lines, stripped)
 
         else --normal lines
+            line = line:gsub("^(%s*)\\(##?)", "%1%2")
             in_string, eqs = multiline_status(line, in_string, eqs)
             ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
