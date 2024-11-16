@@ -40,18 +40,21 @@ TODO
 
 # Preprocessing
 
-Consecutive lines in a file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are executed by the preprocessor as sandboxed Lua code. Note that the detection of multi-line strings and comments does not take preprocessor macros into account.
+Lines in the input file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are executed by the preprocessor as sandboxed Lua code. Note that the detection of multi-line strings and comments does not take preprocessor macros into account.
 
 Lines beginning with '##' are both run as preprocessor code and exported verbatim to the output, which is occasionally useful for setting constant values in both the output code and the preprocessor when metaprogramming Lua code.
 
 If you're preprocessing a file which may need to have lines beginning with one or more #, such as Markdown headings, you can escape the preprocessor with a single backslash as so:
+
 ```
 \# Heading 1
 \## Heading 2
 \### Heading 3
 ```
 
-Within the sandbox, preprocessor code has access to the following standard functions:
+## Included Functions and Variables.
+
+Within the sandbox, preprocessor code has access to the following standard functions and variables:
 ```lua
 coroutine.*  io.*    math.*  string.*  table.*
 assert       error   ipairs  next      pairs
@@ -59,12 +62,18 @@ pcall        print   select  tonumber  tostring
 type         unpack  xpcall  _VERSION
 ```
 
-## Included Variables
+The sandbox also has access to the following non-standard functions and variables:
+
+- `write(line)`: Inserts the given argument `line` as a line in the output file.
+
+- `include(filename)`: Runs `filename` through the current preprocessor and inserts the result into the output file. See [Including Files](#including-files).
+
+- `macros`: A special table which controls the preprocessor's macro system. See [Macros](#macros).
+
+- `filename`: the full path of the current file as used to load it, or an empty string if the input came from loading a string.
+    - for example:  `print(filename) --> folder/example.lua`
 
 TODO: Ability to include variables from the API or command line.
-
-- filename: the full path of the current file, or an empty string if the code came from loading a string.
-    - for example:  `print(filename) --> folder.example.lux`
 
 ## Conditional Lines
 
