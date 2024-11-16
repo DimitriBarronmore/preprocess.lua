@@ -420,13 +420,13 @@ local function setup_sandbox(name, arguments, base_env)
         sandbox._linemap[#sandbox._output] = debug.getinfo(2, "l").currentline
     end
 
-    sandbox.include = function(filename)
+    sandbox.include = function(filename, flags)
         local file = fs.open(filename, "r")
         if file == nil then
             error("file " .. filename .. " could not be found")
         end
         local txt = file:read("a")
-        local inclbox = compile_lines(txt, filename, preparation_callback, sandbox)
+        local inclbox = compile_lines(txt, filename, flags, sandbox)
         for count, line in ipairs(inclbox._output) do
             table.insert(sandbox._output, line)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])

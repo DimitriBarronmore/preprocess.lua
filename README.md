@@ -66,7 +66,7 @@ The sandbox also has access to the following non-standard functions and variable
 
 - `write(line)`: Inserts the given argument `line` as a line in the output file.
 
-- `include(filename)`: Runs `filename` through the current preprocessor and inserts the result into the output file. See [Including Files](#including-files).
+- `include(filename, arguments)`: Runs `filename` through the current preprocessor using the given `arguments` table, and inserts the result into the output file. See [Including Files](#including-files).
 
 - `macros`: A special table which controls the preprocessor's macro system. See [Macros](#macros).
 
@@ -219,7 +219,7 @@ print(blank)            --> print()
 ```
 
 ## Including Files
-You can insert the contents of another file into the current one using the `include(filename)` function. This will immediately run the file `filename` through the same preprocessor environment and write the result into the output file.
+You can insert the contents of another file into the current one using the `include(filename, arguments)` function. This will immediately run the file `filename` through the same preprocessor environment and write the result into the output file. If an `arguments` table is provided, those arguments will only apply to the included file.
 
 ```lua
 --- header.lua ---
