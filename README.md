@@ -152,6 +152,7 @@ print(constant) --> print(1000)
 print("😂") --> print(":joy:")
 
 -- The result of a macro doesn't need to be constant. This is also a valid macro.
+-- In this case, the value will change each time the file is processed.
 # macros.RANDOM = math.random(1, 100)
 
 -- Multiple macros can run into each other if defined in the correct order. Be careful.
@@ -173,22 +174,18 @@ print("reverse(foo)") --> print(" foo")
 print(discardfirst(1,2,3)) --> print(2, 3)
 
 
--- Callback macros are Lua functions executed entirely in the preprocessor.
+-- Callback macros are Lua functions defined and executed entirely in the preprocessor.
 -- The parenthesized arguments in the source file are copied verbatim into the function call.
 -- This means literals and expressions can be used, and preprocessor variables can be referenced.
 -- The return value of the function is cast to a string and replaces the original text.
-# example_msg = "hi there"
-# macros.print_var = function(name)
-#   return name
-# end
-print( "print_var(example_msg)" ) --> print( "hi there" )
-
--- Callback macros can be extremely useful for evaluating expressions at compile time.
--- If a callback macro returns multiple values, they're inserted into the text separated by commas.
 # macros["$"] = function(...)
-# return ...
+# 	return ...
 # end
+# example_msg = "hi there"
 print( "$(example_msg)" ) --> print( "hi there" )
+
+-- Callback macros can be extremely useful for evaluating inline expressions at compile time.
+-- If a callback macro returns multiple values, they're inserted into the text separated by commas.
 print( "$("hello " .. "world")" ) --> print( "hello world" )
 tab = { $( 200 * 100, 200 / 100) } --> tab = { 20000, 2.0 }
 
