@@ -29,6 +29,9 @@ local dry_run = false
 local extra_arguments = {}
 local filenames = {}
 
+if #arg == 0 then
+	print(help_txt)
+end
 for i = 1, #arg do
 	if arg[i] == "--help" or arg[i] == "-h" then
 		print(help_txt)
@@ -55,38 +58,48 @@ local function insert_direc_contents(path)
 	f:close()
 end
 
+local filenames_to_process = {}
 -- Process the arguments.
 local count = 0
 while count < #arg do
 	count = count + 1
 	local argument = arg[count]
-	-- This must be a flag.
-	if string.match(argument, "^%-") then
-		local stripped = argument:gsub("^%-%-?", "")
+	-- This must be an option.
+	if string.match(argument, "^%-%w") then
+		for opt in argument:gmatch("%w") do
 		-- Option: -o : change output directory
-		if stripped == "o" then
-			count = count + 1
-			out_direc = arg[count]
-			if not out_direc then
-				error("flag '-o' must be followed by a valid filepath")
+			if opt == "o" then
+				count = count + 1
+				out_direc = arg[count]
+				if not out_direc then
+					print("error: flag '-o' must be followed by a valid filepath")
+					return
+				end
+				if not (out_direc:gsub(-1, -1) == "/") then
+					out_direc = out_direc .. "/"
+				end
+			-- Option: -v : enable verbose
+			elseif opt == "v" then
+				verbose = true
+			-- Option: -d : enable dry-run
+			elseif opt == "d" then
+				dry_run = true
+			-- Option: -r : enable recursion
+			elseif opt == "r" then
+				recursive = true
+			-- Option: -l : enable linemaps
+			elseif opt == "l" then
+				linemaps = true
 			end
-			if not (out_direc:gsub(-1, -1) == "/") then
-				out_direc = out_direc .. "/"
-			end
-		-- Option: -v : enable verbose
-		elseif stripped == "v" then
-			verbose = true
-		-- Option: -d : enable dry-run
-		elseif stripped == "d" then
-			dry_run = true
-		-- Option: -r : enable recursion
-		elseif stripped == "r" or stripped == "recursive" then
+		end
+	-- This must be a flag.
+	elseif string.match(argument,"^%-%-%w") then
+		local stripped = argument:gsub("^%-%-", "")
+		if stripped == "recursive" then
 			recursive = true
-		-- Option: -l : enable linemaps
-		elseif stripped == "l" or stripped == "linemaps" then
+		elseif stripped == "linemaps" then
 			linemaps = true
-		-- Export all other flags to the preprocessor.
-		else
+		else -- Export all other flags to the preprocessor.
 			local _, _, key, val = stripped:find("^(%S+)=(.+)$")
 			if key then
 				extra_arguments[key] = tonumber(val) or val
@@ -95,33 +108,43 @@ while count < #arg do
 			end
 		end
 	else
-		-- Insert filenames into the list.
-		if not recursive then
-			if is_directory(argument) then
-				error("filepath '" .. argument .. "' is a directory")
-			else
-				table.insert(filenames, argument)
-			end
+		-- Insert filenames into an intermediate list, to make argument order less important.
+		table.insert(filenames_to_process, argument)
+	end
+end
+-- Insert filenames into the final list.
+for _, filename in ipairs(filenames_to_process) do
+	if not recursive then
+		if is_directory(filename) then
+			print("error: filepath '" .. filename .. "' is a directory. did you mean to use -r?")
+			return
 		else
-			insert_direc_contents(argument)
+			table.insert(filenames, filename)
 		end
+	else
+		insert_direc_contents(filename)
 	end
 end
 
 -- Print help if no files were given.
 if #filenames == 0 then
-	print(help_txt)
+	print("error: one or more files must be provided")
 	return
 end
 
+local dry_created_directories = {}
 -- Process the files...
 for _, filename in ipairs(filenames) do
 	if filename:find("/") then
 		local filename_base = filename:gsub("/[^/]+$", "")
+		local new_direc = out_direc .. filename_base
 		if dry_run then
-			print("create directory '" .. out_direc .. filename_base .. "'")
+			if not dry_created_directories[new_direc] then
+				print("create directory '" .. new_direc .. "'")
+				dry_created_directories[new_direc] = true
+			end
 		else
-			os.execute(("mkdir --p %s %s"):format(verbose and "-v" or "", out_direc .. filename_base))
+			os.execute(("mkdir --p %s %s"):format(verbose and "-v" or "", new_direc))
 		end
 	end
 	if verbose or dry_run then
