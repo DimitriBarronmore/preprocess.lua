@@ -4,6 +4,22 @@ A portable language-agnostic file preprocessor written in plain Lua. While it's 
 
 # Usage
 
+## As a standalone tool.
+
+> NOTE: This only works properly on UNIX systems due to a hard dependency on the UNIX "file", "find" and "mkdir" commands and an expectation that the current file separator is "/". It might work on Windows under WSL, but I haven't tried it. If you're not on a system which supports this, you'll likely need to write your own build scripts in Lua.
+
+If you want to use the utility from any directory, place **preprocess.lua** on your Lua PATH, and **preprocess_c.lua** on your system PATH. Otherwise, place them in the directory you intend to run the tool from. If you wish, you can rename **preprocess_c.lua** to something more appropriate.
+
+You can then invoke the command-line utility as so:
+
+```bash
+preprocess_c.lua [options] [filenames]
+OR
+lua preprocess_c.lua [options] [filenames]
+```
+
+Invoking the utility without giving it any filenames or while passing the `-h` / `--help` flags will show the available options.
+
 ## As a Lua library.
 
 Import the library as a single Lua file.
@@ -33,10 +49,6 @@ preprocess.writefile(input, output, arguments, write_linemap)
 -- Prints the string with the linemap values for each line prepended.
 preprocess.debug_print(text, linemap)
 ```
-
-## As a standalone tool.
-
-TODO
 
 # Preprocessing
 
