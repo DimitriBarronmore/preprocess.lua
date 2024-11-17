@@ -425,6 +425,10 @@ local function setup_sandbox(name, arguments, base_env)
     end
 
     sandbox.include = function(filename, flags)
+        if sandbox.filename:find("/") then
+            local filename_base = sandbox.filename:gsub("[^/]+$", "")
+            filename = filename_base .. filename
+        end
         if sandbox.__included[filename] then
             error("detected cyclic inclusion loop", 2)
         else

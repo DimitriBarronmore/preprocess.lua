@@ -222,12 +222,14 @@ print(blank)            --> print()
 ## Including Files
 You can insert the contents of another file into the current one using the `include(filename, arguments)` function. This will immediately run the file `filename` through the same preprocessor environment and write the result into the output file. If an `arguments` table is provided, those arguments will only apply to the included file.
 
+The filepath given to `include` is parsed relative to the current file.
+
 ```lua
---- header.lua ---
+--- test/header.lua ---
 print("abra cadabra")
 # define apple orange
 
---- main.lua ---
+--- test/main.lua ---
 print("apple")
 # include "header.txt"
 print("apple")
@@ -237,9 +239,4 @@ print("apple")
 print("abra cadabra")
 print("orange")
 --- end output ---
-
--- note that you can use the filename variable to load adjacent files.
--- assuming the current file is "folder/foobar.lua", this includes folder/header.lua
-# local path = filename:gsub("foobar%.lua$", "")
-# include(path .. "header.lua")
 ```
