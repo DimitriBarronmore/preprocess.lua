@@ -1,6 +1,9 @@
 # preprocess.lua
-A portable language-agnostic file preprocessor written in plain Lua. While it's designed primarily for use as a metaprogramming tool for Lua programs, it can be used for other document types as well.
+A portable language-agnostic file preprocessor written in plain Lua and compatible with all major versions of (5.1+ and JIT). While it's designed primarily for use as a metaprogramming tool for Lua programs, it can be used for writing other document types as well. 
 
+The preprocessor is primarily built around a robust macro expansion system. Advanced utilities for expanding the preprocessor's available behavior may be added in the fututre.
+
+Originally created for [Luxtre](https://github.com/DimitriBarronmore/luxtre), and now featuring substantial improvements over the initial version.
 
 # Usage
 
