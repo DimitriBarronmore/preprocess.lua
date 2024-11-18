@@ -55,13 +55,19 @@ preprocess.debug_print(text, linemap)
 
 # Preprocessing
 
-Lines in the input file which begin with '#' (ignoring trailing whitespace, shebangs, and multi-line strings/comments) are executed by the preprocessor as sandboxed Lua code. Note that the detection of multi-line strings and comments does not take preprocessor macros into account.
+Lines in the input file which begin with '#' (ignoring trailing whitespace and shebangs) are executed by the preprocessor as sandboxed Lua code.
 
 Lines beginning with '##' are both run as preprocessor code and exported verbatim to the output, which is occasionally useful for setting constant values in both the output code and the preprocessor when metaprogramming Lua code.
 
-If you're preprocessing a file which may need to have lines beginning with one or more #, such as Markdown headings, you can escape the preprocessor with a single backslash as so:
+If you need to have lines beginning with one or more #, such as writing a multiline string or as Markdown headings, you can escape the preprocessor with a single backslash as so:
 
 ```
+--- Lua ---
+local str = [[
+    \# Line with a hash.
+]]
+
+--- Markdown ---
 \# Heading 1
 \## Heading 2
 \### Heading 3

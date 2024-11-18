@@ -518,7 +518,7 @@ compile_lines = function(text, name, arguments, base_env)
 	name = name or "<preprocessor input>"
     -- ppenv.__count = 1
     local positions_count = 0
-    local in_string, eqs = false, ""
+    -- local in_string, eqs = false, ""
     local direc_lines = {}
     
     for line in (text .. "\n"):gmatch(".-\n") do
@@ -544,14 +544,15 @@ compile_lines = function(text, name, arguments, base_env)
             ppenv.__write_lines[ppenv.__count] = {line, 1}
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         elseif line:match("^%s*#")
-          and not in_string then -- DIRECTIVES 
+        --   and not in_string then -- DIRECTIVES 
+        then
           
             -- DOUBLE-EXPORT
             if line:match("^%s*##") then
                 local line = line:gsub("^%s*##", "")
 
                 -- write blocks (MOSTLY DUPLICATED, see below)
-                in_string, eqs = multiline_status(line, in_string, eqs)
+                -- in_string, eqs = multiline_status(line, in_string, eqs)
                 ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
                 line = line .. ("; __writefromline(%d, true)"):format(ppenv.__count)
             end
@@ -570,7 +571,7 @@ compile_lines = function(text, name, arguments, base_env)
 
         else --normal lines
             line = line:gsub("^(%s*)\\(##?)", "%1%2")
-            in_string, eqs = multiline_status(line, in_string, eqs)
+            -- in_string, eqs = multiline_status(line, in_string, eqs)
             ppenv.__write_lines[ppenv.__count] = {line, special_count or positions_count}
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         end
