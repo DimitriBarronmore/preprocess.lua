@@ -132,21 +132,23 @@ if #filenames == 0 then
 	return
 end
 
-local dry_created_directories = {}
+local cache_created_directories = {}
 -- Process the files...
 for _, filename in ipairs(filenames) do
+	local filename_base = ""
 	if filename:find("/") then
 		local filename_base = filename:gsub("/[^/]+$", "")
-		local new_direc = out_direc .. filename_base
+	end
+	local new_direc = out_direc .. filename_base
+	if not cache_created_directories[new_direc] then
+		cache_created_directories[new_direc] = true
 		if dry_run then
-			if not dry_created_directories[new_direc] then
-				print("create directory '" .. new_direc .. "'")
-				dry_created_directories[new_direc] = true
-			end
+			print("create directory '" .. new_direc .. "'")
 		else
 			os.execute(("mkdir --p %s %s"):format(verbose and "-v" or "", new_direc))
 		end
 	end
+
 	if verbose or dry_run then
 		print("processing file: " .. filename)
 	end
