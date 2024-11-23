@@ -10,6 +10,8 @@ Available options are:
 	-v               | display the names of each file being processed
 	-d               | perform a dry run; the names of the files to be created will be printed. 
 	-r, --recursive  | compile directories and their contents recursively
+	-b, --rebase     | the contents of directories compiled with -r will be placed directly
+	                 | in the output folder instead of in a matching sub-folder.
 	-l, --linemaps   | output linemap files; these will be named [filename].linemap
 	--silent         | silences print statements from processing files
 	--help           | show this help message
@@ -22,6 +24,7 @@ For example, build numbers could be tracked by passing a --BUILDNUM=42 option.
 ]]):format(arg[0])
 
 local out_direc = "luapp.out/"
+local base_direc = false
 local verbose = false  -- CHANGE LATER
 local recursive = false
 local linemaps = false
@@ -52,7 +55,7 @@ local function insert_direc_contents(path)
 	local f = io.popen("find " .. path)
 	for line in f:lines() do
 		if not is_directory(line) then
-			table.insert(filenames, line)
+			table.insert(filenames, {fname = line, base = path})
 		end
 	end
 	f:close()
@@ -87,6 +90,9 @@ while count < #arg do
 			-- Option: -r : enable recursion
 			elseif opt == "r" then
 				recursive = true
+			-- Option: -b : enable folder rebasing
+			elseif opt == "b" then
+				base_direc = true
 			-- Option: -l : enable linemaps
 			elseif opt == "l" then
 				linemaps = true
@@ -99,6 +105,8 @@ while count < #arg do
 			recursive = true
 		elseif stripped == "linemaps" then
 			linemaps = true
+		elseif stripped == "rebase" then
+			base_direc = true
 		else -- Export all other flags to the preprocessor.
 			local _, _, key, val = stripped:find("^(%S+)=(.+)$")
 			if key then
@@ -119,7 +127,7 @@ for _, filename in ipairs(filenames_to_process) do
 			print("error: filepath '" .. filename .. "' is a directory. did you mean to use -r?")
 			return
 		else
-			table.insert(filenames, filename)
+			table.insert(filenames,{fname = filename})
 		end
 	else
 		insert_direc_contents(filename)
@@ -134,10 +142,14 @@ end
 
 local cache_created_directories = {}
 -- Process the files...
-for _, filename in ipairs(filenames) do
+for _, filename_set in ipairs(filenames) do
+	local filename = filename_set.fname
 	local filename_base = ""
 	if filename:find("/") then
-		local filename_base = filename:gsub("/[^/]+$", "")
+		filename_base = filename:gsub("/[^/]+$", "")
+		if base_direc then
+			filename_base = filename_base:gsub("^" .. filename_set.base, "")
+		end
 	end
 	local new_direc = out_direc .. filename_base
 	if not cache_created_directories[new_direc] then
@@ -153,7 +165,11 @@ for _, filename in ipairs(filenames) do
 		print("processing file: " .. filename)
 	end
 	if not dry_run then
-		pp.writefile(filename, out_direc .. filename, extra_arguments, linemaps)
+		local outfilename = filename
+		if base_direc then
+			outfilename = outfilename:gsub("^" .. filename_set.base, "")
+		end
+		pp.writefile(filename, out_direc .. outfilename, extra_arguments, linemaps)
 	end
 end
 if dry_run then
