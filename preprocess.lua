@@ -80,11 +80,11 @@ local fs = {}
 
 fs.open = function(filepath, mode)
 	if mode == nil then mode = "r" end
-	local file = io.open(filepath, mode)
+	local file, err = io.open(filepath, mode)
 	-- if file then
 	-- 	return newfile_lua(file)
 	-- end
-    return file
+    return file, err
 end
 
 fs.exists = function(filepath)
@@ -434,9 +434,9 @@ local function setup_sandbox(name, arguments, base_env)
         else
             sandbox.__included[filename] = true
         end
-        local file = fs.open(filename, "r")
+        local file, err = fs.open(filename, "r")
         if file == nil then
-            error("file " .. filename .. " could not be found", 2)
+            error("file " .. filename .. " could not be included\n" .. err, 2)
         end
         local txt = file:read("a")
         local inclbox = compile_lines(txt, filename, flags, sandbox)
@@ -604,9 +604,9 @@ end
 function export.getfile(filepath, arguments)
     validate_type(filepath, "string", 1, false)
     validate_type(arguments, "table", 2, true)
-    local file = fs.open(filepath)
+    local file, err = fs.open(filepath)
     if file == nil then
-        error("could not find file '" .. filepath .. "'", 2)
+        error("could not find file '" .. filepath .. "'\n" .. err, 2)
     end
     local text = file:read("a")
     local out = compile_lines(text, filepath, arguments)
@@ -619,15 +619,15 @@ function export.writefile(input, output, arguments, write_linemap)
     validate_type(arguments, "table", 3, true)
     validate_type(write_linemap, "boolean", 4, true)
     local text, linemap = export.getfile(input, arguments)
-    local output_handle = fs.open(output, "w+")
+    local output_handle, err = fs.open(output, "w+")
     if not output_handle then
-        error("failed to open output file '" .. output .. "'", 2)
+        error("failed to open output file '" .. output .. "'\n" .. err, 2)
     end
     local linemap_handle
     if write_linemap then
-        linemap_handle = fs.open(output .. ".linemap", "w+")
+        linemap_handle, err = fs.open(output .. ".linemap", "w+")
         if not linemap_handle then
-            error("failed to open linemap file '" .. output .. ".linemap'", 2)
+            error("failed to open linemap file '" .. output .. ".linemap'\n" .. err, 2)
         end
     end
     output_handle:write(text)
