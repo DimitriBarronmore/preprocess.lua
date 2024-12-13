@@ -437,8 +437,8 @@ local function setup_sandbox(name, arguments, base_env)
         if file == nil then
             error("file " .. filename .. " could not be included\n" .. err, 2)
         end
-        local txt = file:read("a")
-        local inclbox = compile_lines(txt, filename, flags, sandbox)
+        local inclbox = compile_lines(file, filename, flags, sandbox)
+        file:close()
         for count, line in ipairs(inclbox._output) do
             table.insert(sandbox._output, line)
             local pos_string = tostring(sandbox.__count - 1) .. (" > %s:%s"):format(filename, inclbox._linemap[count])
