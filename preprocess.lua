@@ -394,7 +394,6 @@ local function setup_sandbox(name, arguments, base_env)
     sandbox._linemap = {}
     sandbox.__special_positions = {}
     sandbox.__count = 0
-    sandbox.__lines = {}
 
     sandbox.__writefromline = function(num, skip_macros)
         local line = sandbox.__write_lines[num][1]
@@ -513,24 +512,27 @@ local function is_block_pos_invalid(position, invalid_pos_map)
 end
 
 -- See back-defined local variable.
-compile_lines = function(text, name, arguments, base_env)
+compile_lines = function(input, name, arguments, base_env)
     local ppenv = setup_sandbox(name, arguments, base_env)
 	name = name or "<preprocessor input>"
     -- ppenv.__count = 1
     local positions_count = 0
     -- local in_string, eqs = false, ""
     local direc_lines = {}
-    
-    for line in (text .. "\n"):gmatch(".-\n") do
-        table.insert(ppenv.__lines, line)
+
+    local iterator, cursor
+    if type(input) == "string" then
+        iterator = string.gmatch(input .. "\n", ".-\n")
+    elseif type(input) == "userdata" then -- File object.
+        cursor = input:seek()
+        input:seek("set")
+        iterator = input:lines()
+    else
+        error("input must be a string or a file handle", 2)
     end
-    -- Padding, because it sometimes misses the last line otherwise.
-    table.insert(ppenv.__lines, "")
-
-    while ppenv.__count < #ppenv.__lines do
+    
+    for line in iterator do
         ppenv.__count = ppenv.__count + 1
-
-        local line = ppenv.__lines[ppenv.__count]
         local special_count
         if ppenv.__special_positions[ppenv.__count] then
             special_count = ppenv.__special_positions[ppenv.__count]
@@ -576,6 +578,10 @@ compile_lines = function(text, name, arguments, base_env)
             table.insert(direc_lines,("__writefromline(%d)"):format(ppenv.__count))
         end
     end
+    if cursor then -- Reset the file position to where it was, just in case.
+        input:seek("set", cursor)
+    end
+    
     local chunk = table.concat(direc_lines, "\n")
     -- direc_lines = {}
     local func, err = load_func(chunk, name .. " (preprocessor)", "t", ppenv)
@@ -608,8 +614,8 @@ function export.getfile(filepath, arguments)
     if file == nil then
         error("could not find file '" .. filepath .. "'\n" .. err, 2)
     end
-    local text = file:read("a")
-    local out = compile_lines(text, filepath, arguments)
+    local out = compile_lines(file, filepath, arguments)
+    file:close()
     return table.concat(out._output, "\n"), out._linemap
 end
 
