@@ -369,6 +369,22 @@ local macros_mt = {
 -- Set up local variable back here for the sake of forward definition.
 local compile_lines
 
+
+local fm_check_tab_contents -- Backdefined for frontmatter checking.
+fm_check_tab_contents = function(tab, seen, level)
+    level = (level and level + 1) or 3
+    seen = seen or {}
+    for _, v in pairs(tab) do
+        local ty = type(v)
+        if (ty == "function") or (ty == "thread") or (ty == "userdata") then
+            error("frontmatter can only contain primitive values", level)
+        elseif (ty == "table") and not seen[ty] then
+            seen[ty] = true
+            fm_check_tab_contents(v, seen, level)
+        end
+    end
+end
+
 local function setup_sandbox(name, arguments, base_env)
     local sandbox
     if not base_env then
@@ -388,12 +404,30 @@ local function setup_sandbox(name, arguments, base_env)
     end
 
     sandbox.filename = name or ""
-    sandbox._output = {}
+    sandbox._output = { }
     sandbox.__write_lines = {}
     sandbox.__define_lines = {}
     sandbox._linemap = {}
     sandbox.__special_positions = {}
     sandbox.__count = 0
+    sandbox.__frontmatter = false
+
+    sandbox.frontmatter = function(tab)
+        if sandbox.__frontmatter then
+            error("frontmatter can only be defined once", 2)
+        elseif sandbox.__included[sandbox.filename] then -- If this file is an inclusion...
+            error("cannot define frontmatter from an included file", 2)
+        elseif #sandbox._output > 0 then -- If anything has been marked for output...
+            error("frontmatter must be defined at the beginning of the file", 2)
+        end
+
+        fm_check_tab_contents(tab)
+        for k, v in pairs(tab) do
+            sandbox[k] = v
+        end
+
+        sandbox.__frontmatter = tab
+    end
 
     sandbox.__writefromline = function(num, skip_macros)
         local line = sandbox.__write_lines[num][1]
@@ -511,6 +545,41 @@ local function is_block_pos_invalid(position, invalid_pos_map)
     return false
 end
 
+local find_frontmatter = function(input, name, arguments)
+    local ppenv = setup_sandbox(name, arguments)
+    name = name or "<frontmatter input>"
+
+    local iterator, cursor
+    if type(input) == "string" then
+        iterator = string.gmatch(input .. "\n", ".-\n")
+    elseif type(input) == "userdata" then -- File object.
+        cursor = input:seek()
+        input:seek("set")
+        iterator = input:lines()
+    else
+        error("input must be a string or a file handle", 2)
+    end
+
+    local direc = {}
+    for line in iterator do
+        if line:match("^#!") then -- Ignore shebang.
+
+        elseif line:match("^%s*#") then
+            local line = line:gsub("^%s*##?", "")
+            table.insert(direc, line)
+        else -- Stop looking on any non-directive line.
+            break
+        end
+    end
+    local chunk = table.concat(direc, "\n")
+    local func, err = load_func(chunk, name .. " (frontmatter)", "t", ppenv)
+    if err then
+        error(err,2)
+    end
+    func()
+    return ppenv.__frontmatter
+end
+
 -- See back-defined local variable.
 compile_lines = function(input, name, arguments, base_env)
     local ppenv = setup_sandbox(name, arguments, base_env)
@@ -600,10 +669,28 @@ local function validate_type(val, desired_type, number, optional)
     end
 end
 
+function export.fmstring(text, arguments)
+    validate_type(text, "string", 1, false)
+    validate_type(arguments, "table", 2, true)
+    return find_frontmatter(text, nil, arguments)
+end
+
+function export.fmfile(filepath, arguments)
+    validate_type(filepath, "string", 1, false)
+    validate_type(arguments, "table", 2, true)
+    local file, err = fs.open(filepath)
+    if file == nil then
+        error("could not find file '" .. filepath .. "'\n" .. err, 2)
+    end
+    local out = find_frontmatter(file, filepath, arguments)
+    file:close()
+    return out
+end
+
 function export.getstring(text, arguments)
     validate_type(text, "string", 1, false)
     validate_type(arguments, "table", 2, true)
-    local out = compile_lines(text, filepath, arguments)
+    local out = compile_lines(text, nil, arguments)
     return table.concat(out._output, "\n"), table.concat(out._linemap, "\n")
 end
 
