@@ -396,7 +396,11 @@ local function setup_sandbox(name, arguments, base_env)
     end
     if arguments then
         for k, v in pairs(arguments) do
-            sandbox[k] = v
+            if k ~= "__setup_sandbox" then
+                print("adding " .. k .. " to sandbox")
+                print(v)
+                sandbox[k] = v
+            end
         end
     end
     if sandbox.silent == true then
@@ -483,6 +487,9 @@ local function setup_sandbox(name, arguments, base_env)
     if base_env then
         setmetatable(sandbox, {__index = base_env, __newindex = base_env})
     end
+    if arguments and arguments.__setup_sandbox then
+        arguments.__setup_sandbox(sandbox)
+    end
     return sandbox
 end
 
@@ -567,9 +574,15 @@ local find_frontmatter = function(input, name, arguments)
         elseif line:match("^%s*#") then
             local line = line:gsub("^%s*##?", "")
             table.insert(direc, line)
+            if line:match("^%s*%-%-%-.*") then
+                break
+            end
         else -- Stop looking on any non-directive line.
             break
         end
+    end
+    if cursor then
+        input:seek("set", cursor)
     end
     local chunk = table.concat(direc, "\n")
     local func, err = load_func(chunk, name .. " (frontmatter)", "t", ppenv)
@@ -680,7 +693,7 @@ function export.fmfile(filepath, arguments)
     validate_type(arguments, "table", 2, true)
     local file, err = fs.open(filepath)
     if file == nil then
-        error("could not find file '" .. filepath .. "'\n" .. err, 2)
+        error("could not find file '" .. filepath .. "'\n\t" .. err, 2)
     end
     local out = find_frontmatter(file, filepath, arguments)
     file:close()
