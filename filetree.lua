@@ -251,7 +251,7 @@ local function returnFiletree(path, ignore, for_each_file_callback)
 			local names = get_separated(line)
 			for i, name in ipairs(names) do
 				if name == path then
-					;; -- do nothing, this is root
+					 -- do nothing, this is root
 				elseif (i < #names) or is_directory then
 					-- this must be a directory, either because it's not the top of the path
 					-- or because the top of the path is a directory and not a file
