@@ -72,6 +72,7 @@ local function get_extension(str)
 end
 local extensions_to_process = {
 	[".html"] = true,
+	[".xml"] = true,
 }
 
 local inspect = require("kikito_inspect")
