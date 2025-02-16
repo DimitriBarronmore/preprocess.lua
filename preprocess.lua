@@ -67,7 +67,13 @@ end
       tostring = tostring,
       type = type,
       unpack = unpack,
-      xpcall = xpcall
+      xpcall = xpcall,
+      os = {
+        clock = os.clock,
+        date = os.date,
+        difftime = os.difftime,
+        time = os.time,
+      },
 }
 
 local function new_sandbox()
