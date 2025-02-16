@@ -104,6 +104,21 @@ local function file_sandbox_fix(base_tree, file_obj)
 		sbox.file = file_obj
 		sbox.tree = base_tree[file_obj.containing_directory]
 		sbox.macros["$"] = function(...) return ... end
+		sbox.require_cache = {}
+		sbox.require = function(path)
+			if not path:find("%.lua$") then
+				path = path .. ".lua"
+			end
+			if sbox.require_cache[path] then
+				return sbox.require_cache[path]
+			end
+			local chunk, err = loadfile(arg[1] .. sbox.tree[path].fullname, "t", sbox)
+			if err then
+				error(err, 2)
+			end
+			sbox.require_cache[path] = chunk(file_obj.fullname) or true
+			return sbox.require_cache[path]
+		end
 	end
 	return internal
 end
@@ -127,7 +142,7 @@ for _, file in ipairs(files_to_process) do
 	end
 end
 --- testing
-print(inspect(tree))
-print("ls" .. inspect(tree:_lsrecurse()))
-print(inspect(tree["index.html"]))
-print(tree:_path("index.html"))
+-- print(inspect(tree))
+-- print("ls" .. inspect(tree:_lsrecurse()))
+-- print(inspect(tree["index.html"]))
+-- print(tree:_path("index.html"))
