@@ -116,6 +116,9 @@ local function file_sandbox_fix(base_tree, file_obj)
 			if err then
 				error(err, 2)
 			end
+			if setfenv then
+				setfenv(chunk, sbox)
+			end
 			sbox.require_cache[path] = chunk(file_obj.fullname) or true
 			return sbox.require_cache[path]
 		end
