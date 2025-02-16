@@ -34,6 +34,14 @@ preprocess = require "preprocess"
 The library exposes the following functions:
 ```lua
 --- Takes in a string and an optional table of values to populate the preprocessor with.
+--- Efficiently returns a table containing the file's metadata, or false if there is none.
+metadata = preprocess.fmstring(text, arguments)
+
+--- Takes in a path to a file and an optional table of values to populate the preprocessor with.
+--- Efficiently returns a table containing the file's metadata, or false if there is none.
+metadata = preprocess.fmfile(filepath, arguments)
+
+--- Takes in a string and an optional table of values to populate the preprocessor with.
 --- Returns a string output and an array of the source locations of each line.
 text, linemap = preprocess.getstring(text, arguments)
 
@@ -77,10 +85,11 @@ local str = [[
 
 Within the sandbox, preprocessor code has access to the following standard functions and variables:
 ```lua
-coroutine.*  io.*    math.*  string.*  table.*
-assert       error   ipairs  next      pairs
-pcall        print   select  tonumber  tostring
-type         unpack  xpcall  _VERSION
+coroutine.*  io.*     math.*       string.*  table.*
+os.clock     os.date  os.difftime  os.time   assert
+error        ipairs   next         pairs     pcall
+print        select   tonumber     tostring  type
+unpack       xpcall   _VERSION
 ```
 
 The sandbox also has access to the following non-standard functions and variables:
@@ -94,11 +103,41 @@ The sandbox also has access to the following non-standard functions and variable
 - `filename`: the full path of the current file as used to load it, or an empty string if the input came from loading a string.
     - for example:  `print(filename) --> folder/example.lua`
 
+- `frontmatter(table)`: A special function used for handling external file metadata usable by advanced build tools. See [Frontmatter](#frontmatter).
+
 Arguments provided to the preprocessor through the `arguments` parameters in the Lua API or through the command-line utility are exposed to the sandbox environment as standard Lua values. Be careful not to overwrite important values with preprocessor arguments.
 
 ### Special Flags
 
 If an argument named `silent` is given to the preprocessor sandbox as `true`, then print statements from the preprocessor will be silenced.
+
+If an argument named `__setup_sandbox` which is a Lua function is given to the preprocessor sandbox, at the end of the sandbox initialization process this function will be run with the sandbox as the sole argument. This can be used to expand the sandbox with new functions.
+
+## Frontmatter
+
+Advanced build scripts may wish to gather metadata about a file before it's actually compiled. Rather than futz about with standard YAML frontmatter, the preprocessor allows metadata to be written using the `frontmatter(table)` function.
+
+```lua
+# frontmatter {
+#   foo = "bar",
+#   apples = "oranges",
+# }
+```
+
+The `frontmatter` function is special in that it must be called before any lines are written to the output, can only be called once, and cannot be called in any file being `include`ed in another file (See [Including Files](#including-files)).
+
+All values in the table given to `frontmatter` must be primitive Lua types, which is to say booleans, numbers, strings, or tables containing only other primitive types. Metadata cannot include functions, coroutines, or userdata. Tables may have metatables, but may not have a __call metamethod.
+
+Each value in `table` will be added to the preprocessor sandbox environment.
+
+The `fmstring` and `fmfile` functions in the Lua API will attempt to retrieve only the file metadata as efficiently as possible. In order to do this, they will stop executing at the first line in the input which does not begin with '#' or '##'. In some cases this may not be enough. You can also force the search to end early by including a preprocessor line which contains only whitespace and a triple-dash.
+
+```lua
+# frontmatter = { ... }
+# print("This will run when pulling metadata.")
+# ---
+# print("But this will not.")
+```
 
 ## Conditional Lines
 
