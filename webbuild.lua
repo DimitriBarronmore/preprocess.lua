@@ -75,8 +75,6 @@ local extensions_to_process = {
 	[".xml"] = true,
 }
 
-local inspect = require("kikito_inspect")
-
 local files_to_process = {}
 local function file_callback(short, full)
 	local obj = {}
@@ -145,6 +143,7 @@ for _, file in ipairs(files_to_process) do
 	end
 end
 --- testing
+-- local inspect = require("kikito_inspect")
 -- print(inspect(tree))
 -- print("ls" .. inspect(tree:_lsrecurse()))
 -- print(inspect(tree["index.html"]))
