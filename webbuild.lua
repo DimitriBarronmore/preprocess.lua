@@ -2,9 +2,9 @@
 --[[
 	GOALS
 	- [x] Get the filetree for the given directory.
-	- [ ] For each valid file, extract metadata. Otherwise, copy.
-	- [ ] Go through html, css, and xml files in order and process them into an output directory.
-		- [ ] Ensure that the files being processed have access to the filetree,
+	- [x] For each valid file, extract metadata. Otherwise, copy.
+	- [x] Go through html, css, and xml files in order and process them into an output directory.
+		- [x] Ensure that the files being processed have access to the filetree,
 			  and that they can require files themselves.
 --]]
 local pp = require "preprocess"
@@ -73,6 +73,7 @@ end
 local extensions_to_process = {
 	[".html"] = true,
 	[".xml"] = true,
+	[".css"] = true,
 }
 
 local files_to_process = {}
