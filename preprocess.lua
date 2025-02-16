@@ -386,6 +386,9 @@ fm_check_tab_contents = function(tab, seen, level)
             error("frontmatter can only contain primitive values", level)
         elseif (ty == "table") and not seen[ty] then
             seen[ty] = true
+            if debug.getmetatable(v) and debug.getmetatable(v).__call then
+                error("frontmatter cannot contain callable tables" ,level)
+            end
             fm_check_tab_contents(v, seen, level)
         end
     end
@@ -494,6 +497,7 @@ local function setup_sandbox(name, arguments, base_env)
         setmetatable(sandbox, {__index = base_env, __newindex = base_env})
     end
     if arguments and arguments.__setup_sandbox then
+        assert(type(arguments.__setup_sandbox) == "function", "__setup_sandbox must be type function")
         arguments.__setup_sandbox(sandbox)
     end
     return sandbox
@@ -580,7 +584,7 @@ local find_frontmatter = function(input, name, arguments)
         elseif line:match("^%s*#") then
             local line = line:gsub("^%s*##?", "")
             table.insert(direc, line)
-            if line:match("^%s*%-%-%-.*") then
+            if line:match("^%s*%-%-%-%s*$") then
                 break
             end
         else -- Stop looking on any non-directive line.
