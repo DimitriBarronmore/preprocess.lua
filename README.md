@@ -56,6 +56,13 @@ text, linemap = preprocess.getfile(filepath, arguments)
 --- source location of the respective line in the output file.
 preprocess.writefile(input, output, arguments, write_linemap)
 
+preprocess.compile_lines(input, name, arguments, base_env)
+--- Internal function. Takes a string or file handle as input, an optional chunk name, an
+--- optional table of preprocessor arguments, and an optional parent-sandbox.
+--- Directly returns the preprocessor sandbox environment after the file is processed.
+--- You probably won't need this. I'm just lazy and need it for compatbility with an
+--- existing project.
+
 -- Takes in a string and a linemap table as returned from getstring() or getfile().
 -- Prints the string with the linemap values for each line prepended.
 preprocess.debug_print(text, linemap)

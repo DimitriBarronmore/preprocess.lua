@@ -692,6 +692,8 @@ local function validate_type(val, desired_type, number, optional)
     end
 end
 
+export.compile_lines = compile_lines
+
 function export.fmstring(text, arguments)
     validate_type(text, "string", 1, false)
     validate_type(arguments, "table", 2, true)
